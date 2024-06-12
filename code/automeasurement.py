@@ -13,12 +13,13 @@ import datetime
 from datetime import datetime
 import sqlalchemy
 from sqlalchemy import create_engine
+pd.options.mode.chained_assignment = None  # default='warn' ---don't care about writes making it back to the original frame ---line spectrum_row.loc['Time [hh-mm-ss]'] = now.strftime('%Y-%m-%d %H:%M:%S')
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 #Constants wel aanpassen
-MaterialAdded = '8_may_13_may_test'                	                   #Material added to water
-meas_amount = 3                                                  #Enter the amount of samples you want 120 measurements takes aprox. 2 hours
+MaterialAdded = '26_May'                	                   #Material added to water
+meas_amount = 1000                                                #Enter the amount of samples you want 120 measurements takes aprox. 2 hours
 
 #file location  !BE SURE! to use the / (backslash) and not the (\) frontslash
 File_location_excel = 'C:/Users/Reactorkunde/Desktop/Excel/'        #The excel file will be saved in this folder       
@@ -113,19 +114,36 @@ while N_measurements <= meas_amount:
         #Read values from OPUS sensor
         tribox.unitidentifier = 2
         ABS210 = readmodbus(1036)
+        if np.isnan(ABS210[0]) : ABS210[0] = 0
+
         ABS254 = readmodbus(1042)
+        if np.isnan(ABS254[0]) : ABS254[0] = 0
+
         SAC254 = readmodbus(1032)
+        if np.isnan(SAC254[0]) : SAC254[0] = 0
+
         UVT254 = readmodbus(1062)
+        if np.isnan(UVT254[0]) : UVT254[0] = 0
+
         ABS360 = readmodbus(1034)
+        if np.isnan(ABS360[0]) : ABS360[0] = 0
+
         BODeq = readmodbus(1006)
+        if np.isnan(BODeq[0]) : BODeq[0] = 0
+
         CODeq = readmodbus(1004)
+        if np.isnan(CODeq[0]) : CODeq[0] = 0
+
         NO2 = readmodbus(1048)
+        if np.isnan(NO2[0]) : NO2[0] = 0
+
         NO3 = readmodbus(1046)
+        if np.isnan(NO3[0]) : NO3[0] = 0
         
         #Read values from turbidity sensor
         tribox.unitidentifier = 3
         FNU = readmodbus(1000)
-        
+        if np.isnan(FNU[0]) : FNU[0] = 0
         #Read values from free chlorine sensor
         #tribox.unitidentifier = 4
         #cl = readmodbus(1000)
@@ -134,7 +152,7 @@ while N_measurements <= meas_amount:
         #Read values from microflu
         tribox.unitidentifier = 5
         TRP = readmodbus(1000)          #aanpassen naar microflu spectrum
-        
+        if np.isnan(TRP[0]) : TRP[0] = 0
         
         #new sensor can be added here
             #tribox.unitidentifier is modbus address found in the settings menu of each sensor
@@ -180,9 +198,10 @@ while N_measurements <= meas_amount:
         ) 
         mycursor = mydb.cursor()
         now = datetime.now()
+        #print(float(ABS210[0]),float(ABS254[0]),float(SAC254[0]),float(UVT254[0]),float(ABS360[0]),float(FNU[0]),pHval,conductval,float(TRP[0]),float(BODeq[0]),float(CODeq[0]),float(NO2[0]),float(NO3[0]))
         sql = "INSERT INTO sensors (date,abs210,abs254,sac254,uvt254,abs360,turbidity,acidity,conductivity,trp,bod,cod,no2,no3) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        val = (now.strftime('%Y-%m-%d %H:%M:%S'),float(ABS210[0]),float(ABS254[0]),float(SAC254[0]),float(UVT254[0]),float(ABS360[0]),float(FNU[0]),pHval,conductval,float(TRP[0]),0,float(CODeq[0]),float(NO2[0]),float(NO3[0]))
-        mycursor.execute(sql, val)
+        val = (now.strftime('%Y-%m-%d %H:%M:%S'),float(ABS210[0]),float(ABS254[0]),float(SAC254[0]),float(UVT254[0]),float(ABS360[0]),float(FNU[0]),pHval,conductval,float(TRP[0]),float(BODeq[0]),float(CODeq[0]),float(NO2[0]),float(NO3[0]))
+        mycursor.execute(sql, val) 
 
         mydb.commit()
         mycursor.close()
@@ -205,12 +224,17 @@ while N_measurements <= meas_amount:
                 spectrum.iloc[N_measurements,index] = float(read[0])
                 index += 1
 
+        
         sql_engine = create_engine('mysql+mysqlconnector://root:PumpItUp3S@localhost:3306/pumpitup')
         conn = sql_engine
         spectrum_row = spectrum.loc[N_measurements]
+        spectrum_row.loc['Time [hh-mm-ss]'] = now.strftime('%Y-%m-%d %H:%M:%S')
         spectrum_row_df = pd.DataFrame(spectrum_row).transpose()
         spectrum_row_df.infer_objects().to_sql(name='spectrum', con=conn, if_exists='append', index=False)
         mydb.close()
+        print("record inserted.")
+        
+
         #Here will a simple figure be made
         plist = ['p1','p2','p3','p4','p5','p6','p7','p8','p9','p10','p11','p12','p13']  #'p11', 'p12' 'p13' ]     
         #een figuur aanmaken
