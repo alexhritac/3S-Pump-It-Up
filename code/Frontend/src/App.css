@@ -1,0 +1,12 @@
+.dataCardWrapper {
+  background-color: #efefef;
+  border-radius: 0.5em;
+}
+
+.dataCard {
+  height: 30rem;
+}
+
+.container {
+  width: 100%;
+}
